@@ -27,6 +27,7 @@ class AdaptiveBatcher:
 
         self._max_batch_size = model.settings.max_batch_size
         self._max_batch_time = model.settings.max_batch_time
+        self._min_batch_time = model.settings.min_batch_time
 
         # Save predict function before it gets decorated
         self._predict_fn = model.predict
@@ -130,10 +131,12 @@ class AdaptiveBatcher:
             start = time.time()
             timeout = self._max_batch_time
 
+
             try:
                 while len(to_batch) < self._max_batch_size:
                     internal_id, inference_request = await self._get_request(
-                        timeout=timeout
+                        max_timeout=timeout,
+                        min_timeout=self._min_batch_time
                     )
                     to_batch[internal_id] = inference_request
 
@@ -146,9 +149,11 @@ class AdaptiveBatcher:
 
             yield BatchedRequests(to_batch)
 
-    async def _get_request(self, timeout: float) -> Tuple[str, InferenceRequest]:
+    async def _get_request(self, max_timeout: float, min_timeout: float) -> Tuple[str, InferenceRequest]:
+        read_op = self._requests.get()
+        await wait_for(read_op, timeout=min_timeout)
         if not self._requests.empty():
             return await self._requests.get()
 
-        read_op = self._requests.get()
-        return await wait_for(read_op, timeout=timeout)
+
+        return await wait_for(read_op, timeout=max_timeout)

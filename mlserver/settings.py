@@ -275,6 +275,10 @@ class ModelSettings(BaseSettings):
     """When adaptive batching is enabled, maximum amount of time (in seconds)
     to wait for enough requests to build a full batch."""
 
+    min_batch_time: float = 0.0
+    """When adaptive batching is enabled, minimum amount of time (in seconds)
+    to wait for requests to accumulate"""
+
     # Custom model class implementation
     implementation: PyObject
     """*Python path* to the inference runtime to use to serve this model (e.g.
